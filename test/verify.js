@@ -107,7 +107,13 @@ async function runTests() {
 
   const filesToCheck = [
     'server.js',
+    'src/server.js',
     'src/config/database.js',
+    'src/constants/currencies.js',
+    'src/utils/dateUtils.js',
+    'src/utils/mathUtils.js',
+    'src/middleware/errorHandler.js',
+    'src/middleware/validator.js',
     'src/models/cacheModel.js',
     'src/models/historyModel.js',
     'src/models/favoriteModel.js',
@@ -115,19 +121,28 @@ async function runTests() {
     'src/controllers/currencyController.js',
     'src/controllers/favoriteController.js',
     'src/controllers/historyController.js',
+    'src/routes/currencyRoutes.js',
+    'src/routes/favoriteRoutes.js',
+    'src/routes/historyRoutes.js',
     'src/routes/apiRoutes.js',
     'public/index.html',
     'public/css/style.css',
-    'public/js/app.js'
+    'public/js/app.js',
+    'public/js/modules/utils.js',
+    'public/js/modules/api.js',
+    'public/js/modules/chartManager.js',
+    'public/js/modules/favoritesManager.js',
+    'public/js/modules/historyManager.js',
+    'public/js/modules/travelManager.js'
   ];
 
   for (const relPath of filesToCheck) {
     const fullPath = path.join(__dirname, '..', relPath);
     checkZeroComments(fullPath);
   }
-  console.log('PASS: All files verified with zero comments');
+  console.log(`PASS: All ${filesToCheck.length} files verified with zero comments`);
 
-  console.log('\nAll 11 tests passed successfully!');
+  console.log('\nAll test assertions passed successfully!');
 }
 
 runTests().catch((err) => {

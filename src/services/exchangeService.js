@@ -1,35 +1,8 @@
 const cacheModel = require('../models/cacheModel');
 const historyModel = require('../models/historyModel');
-
-const CURRENCY_DETAILS = {
-  USD: { code: 'USD', name: 'US Dollar', symbol: '$', flag: '🇺🇸' },
-  EUR: { code: 'EUR', name: 'Euro', symbol: '€', flag: '🇪🇺' },
-  GBP: { code: 'GBP', name: 'British Pound', symbol: '£', flag: '🇬🇧' },
-  JPY: { code: 'JPY', name: 'Japanese Yen', symbol: '¥', flag: '🇯🇵' },
-  CAD: { code: 'CAD', name: 'Canadian Dollar', symbol: 'CA$', flag: '🇨🇦' },
-  AUD: { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', flag: '🇦🇺' },
-  CHF: { code: 'CHF', name: 'Swiss Franc', symbol: 'CHF', flag: '🇨🇭' },
-  CNY: { code: 'CNY', name: 'Chinese Yuan', symbol: '¥', flag: '🇨🇳' },
-  INR: { code: 'INR', name: 'Indian Rupee', symbol: '₹', flag: '🇮🇳' },
-  SGD: { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', flag: '🇸🇬' },
-  NZD: { code: 'NZD', name: 'New Zealand Dollar', symbol: 'NZ$', flag: '🇳🇿' },
-  MXN: { code: 'MXN', name: 'Mexican Peso', symbol: 'MX$', flag: '🇲🇽' },
-  BRL: { code: 'BRL', name: 'Brazilian Real', symbol: 'R$', flag: '🇧🇷' },
-  ZAR: { code: 'ZAR', name: 'South African Rand', symbol: 'R', flag: '🇿🇦' },
-  SEK: { code: 'SEK', name: 'Swedish Krona', symbol: 'kr', flag: '🇸🇪' },
-  NOK: { code: 'NOK', name: 'Norwegian Krone', symbol: 'kr', flag: '🇳🇴' },
-  DKK: { code: 'DKK', name: 'Danish Krone', symbol: 'kr', flag: '🇩🇰' },
-  HKD: { code: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$', flag: '🇭🇰' },
-  KRW: { code: 'KRW', name: 'South Korean Won', symbol: '₩', flag: '🇰🇷' },
-  TRY: { code: 'TRY', name: 'Turkish Lira', symbol: '₺', flag: '🇹🇷' },
-  AED: { code: 'AED', name: 'UAE Dirham', symbol: 'AED', flag: '🇦🇪' },
-  THB: { code: 'THB', name: 'Thai Baht', symbol: '฿', flag: '🇹🇭' },
-  PLN: { code: 'PLN', name: 'Polish Zloty', symbol: 'zł', flag: '🇵🇱' },
-  IDR: { code: 'IDR', name: 'Indonesian Rupiah', symbol: 'Rp', flag: '🇮🇩' },
-  CZK: { code: 'CZK', name: 'Czech Koruna', symbol: 'Kč', flag: '🇨🇿' },
-  ILS: { code: 'ILS', name: 'Israeli Shekel', symbol: '₪', flag: '🇮🇱' },
-  PHP: { code: 'PHP', name: 'Philippine Peso', symbol: '₱', flag: '🇵🇭' }
-};
+const { CURRENCY_DETAILS, MAJOR_RESERVE_CURRENCIES } = require('../constants/currencies');
+const { formatYMD, getDateNDaysAgo } = require('../utils/dateUtils');
+const { round, calculateStats } = require('../utils/mathUtils');
 
 const CACHE_TTL = 30 * 60 * 1000;
 
@@ -74,7 +47,9 @@ class ExchangeService {
       return cached.rates;
     }
 
-    throw new Error(`Unable to fetch exchange rates for base currency ${base}`);
+    const err = new Error(`Unable to fetch exchange rates for base currency ${base}`);
+    err.status = 502;
+    throw err;
   }
 
   async convert(sourceCurrency, targetCurrency, rawAmount) {
@@ -83,7 +58,9 @@ class ExchangeService {
     const amount = parseFloat(rawAmount);
 
     if (isNaN(amount) || amount < 0) {
-      throw new Error('Invalid conversion amount');
+      const err = new Error('Invalid conversion amount');
+      err.status = 400;
+      throw err;
     }
 
     if (source === target) {
@@ -105,11 +82,13 @@ class ExchangeService {
     const rate = rates[target];
 
     if (!rate) {
-      throw new Error(`Exchange rate not found for pair ${source}/${target}`);
+      const err = new Error(`Exchange rate not found for pair ${source}/${target}`);
+      err.status = 404;
+      throw err;
     }
 
-    const result = parseFloat((amount * rate).toFixed(4));
-    const inverseRate = parseFloat((1 / rate).toFixed(6));
+    const result = round(amount * rate, 4);
+    const inverseRate = round(1 / rate, 6);
 
     historyModel.record(source, target, amount, result, rate);
 
@@ -129,10 +108,8 @@ class ExchangeService {
     const target = targetCurrency.toUpperCase();
 
     const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - 30);
+    const startDate = getDateNDaysAgo(30);
 
-    const formatYMD = (date) => date.toISOString().split('T')[0];
     const startStr = formatYMD(startDate);
     const endStr = formatYMD(endDate);
 
@@ -150,12 +127,7 @@ class ExchangeService {
             }));
 
             const values = points.map((p) => p.rate);
-            const min = Math.min(...values);
-            const max = Math.max(...values);
-            const avg = parseFloat((values.reduce((acc, v) => acc + v, 0) / values.length).toFixed(4));
-            const first = values[0];
-            const last = values[values.length - 1];
-            const changePercent = parseFloat((((last - first) / first) * 100).toFixed(2));
+            const stats = calculateStats(values);
 
             return {
               source,
@@ -163,7 +135,7 @@ class ExchangeService {
               startDate: sortedDates[0],
               endDate: sortedDates[sortedDates.length - 1],
               points,
-              stats: { min, max, avg, changePercent }
+              stats
             };
           }
         }
@@ -175,22 +147,16 @@ class ExchangeService {
     const points = [];
 
     for (let i = 30; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(endDate.getDate() - i);
+      const d = getDateNDaysAgo(i);
       const variance = 1 + (Math.sin(i / 3) * 0.015) + ((Math.random() - 0.5) * 0.005);
       points.push({
         date: formatYMD(d),
-        rate: parseFloat((baseRate * variance).toFixed(4))
+        rate: round(baseRate * variance, 4)
       });
     }
 
     const values = points.map((p) => p.rate);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const avg = parseFloat((values.reduce((acc, v) => acc + v, 0) / values.length).toFixed(4));
-    const first = values[0];
-    const last = values[values.length - 1];
-    const changePercent = parseFloat((((last - first) / first) * 100).toFixed(2));
+    const stats = calculateStats(values);
 
     return {
       source,
@@ -198,7 +164,7 @@ class ExchangeService {
       startDate: points[0].date,
       endDate: points[points.length - 1].date,
       points,
-      stats: { min, max, avg, changePercent }
+      stats
     };
   }
 
@@ -207,11 +173,12 @@ class ExchangeService {
     const amount = parseFloat(rawAmount);
 
     if (isNaN(amount) || amount < 0) {
-      throw new Error('Invalid budget amount');
+      const err = new Error('Invalid budget amount');
+      err.status = 400;
+      throw err;
     }
 
-    const majorReserveCurrencies = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD'];
-    const targetCurrencies = majorReserveCurrencies
+    const targetCurrencies = MAJOR_RESERVE_CURRENCIES
       .filter((code) => code !== base)
       .slice(0, 5);
 
@@ -219,7 +186,7 @@ class ExchangeService {
 
     const comparison = targetCurrencies.map((code) => {
       const rate = rates[code] || 1;
-      const convertedAmount = parseFloat((amount * rate).toFixed(code === 'JPY' ? 0 : 2));
+      const convertedAmount = round(amount * rate, code === 'JPY' ? 0 : 2);
       const info = CURRENCY_DETAILS[code] || {
         code,
         name: code,
@@ -232,7 +199,7 @@ class ExchangeService {
         name: info.name,
         symbol: info.symbol,
         flag: info.flag,
-        rate: parseFloat(rate.toFixed(4)),
+        rate: round(rate, 4),
         convertedAmount,
         formattedValue: `${info.symbol} ${convertedAmount.toLocaleString()}`
       };
