@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CurrCon - Real-Time Currency Utility</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <header class="navbar">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>CurrCon</h1>
+          <span class="badge-live">
+            <span class="live-pulse"></span>
+            LIVE RATES
+          </span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="mode-toggle-card">
+          <div class="mode-label">
+            <span class="mode-icon">✈️</span>
+            <span class="mode-text">Travel Budgeting</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="travelModeToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+    </header>
+
+    <main class="content-grid">
+      <section class="panel converter-panel">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2 class="panel-title">Currency Converter</h2>
+            <p class="panel-subtitle">Instant conversion across global exchange rates</p>
+          </div>
+          <button id="favoriteBtn" class="btn-icon" title="Save to Favorites">
+            <svg id="starIcon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+          </button>
+        </div>
+
+        <div class="converter-body">
+          <div class="amount-group">
+            <label for="sourceAmount">Amount</label>
+            <div class="input-wrapper">
+              <span id="sourceSymbol" class="currency-symbol">$</span>
+              <input type="number" id="sourceAmount" value="1000" min="0" step="any" placeholder="0.00">
+            </div>
+            <div class="quick-amounts">
+              <button class="chip-btn" data-amt="50">$50</button>
+              <button class="chip-btn" data-amt="100">$100</button>
+              <button class="chip-btn" data-amt="500">$500</button>
+              <button class="chip-btn" data-amt="1000">$1,000</button>
+              <button class="chip-btn" data-amt="5000">$5,000</button>
+            </div>
+          </div>
+
+          <div class="dual-selector-row">
+            <div class="select-col">
+              <label for="sourceCurrency">From</label>
+              <div class="custom-select-box">
+                <span id="sourceFlag" class="select-flag">🇺🇸</span>
+                <select id="sourceCurrency"></select>
+              </div>
+            </div>
+
+            <div class="swap-action">
+              <button id="swapCurrenciesBtn" class="swap-button" title="Swap Currencies">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l4-4m-4 4l-4-4"></path>
+                </svg>
+              </button>
+            </div>
+
+            <div class="select-col">
+              <label for="targetCurrency">To</label>
+              <div class="custom-select-box">
+                <span id="targetFlag" class="select-flag">🇪🇺</span>
+                <select id="targetCurrency"></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="conversion-result-card">
+            <div class="result-header">
+              <span id="resultSubtext">1,000 USD =</span>
+            </div>
+            <div class="result-main">
+              <span id="resultAmount" class="result-value">0.00</span>
+              <span id="resultTargetCode" class="result-code">EUR</span>
+            </div>
+            <div class="result-footer">
+              <div class="rate-pills">
+                <div class="rate-pill">
+                  <span class="rate-pill-label">Rate</span>
+                  <span id="directRateText" class="rate-pill-value">1 USD = 0.00 EUR</span>
+                </div>
+                <div class="rate-pill">
+                  <span class="rate-pill-label">Inverse</span>
+                  <span id="inverseRateText" class="rate-pill-value">1 EUR = 0.00 USD</span>
+                </div>
+              </div>
+              <span id="lastUpdatedText" class="timestamp">Updated just now</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel chart-panel">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2 class="panel-title">30-Day Historical Trend</h2>
+            <p id="chartPairSubtitle" class="panel-subtitle">Exchange rate trajectory for USD to EUR</p>
+          </div>
+          <div class="chart-badge-stat">
+            <span id="trendChangeBadge" class="trend-badge neutral">0.00%</span>
+          </div>
+        </div>
+
+        <div class="chart-stats-row">
+          <div class="chart-stat-item">
+            <span class="stat-label">30D High</span>
+            <span id="statHigh" class="stat-value">--</span>
+          </div>
+          <div class="chart-stat-item">
+            <span class="stat-label">30D Low</span>
+            <span id="statLow" class="stat-value">--</span>
+          </div>
+          <div class="chart-stat-item">
+            <span class="stat-label">30D Average</span>
+            <span id="statAvg" class="stat-value">--</span>
+          </div>
+        </div>
+
+        <div class="chart-wrapper">
+          <canvas id="trendChart"></canvas>
+          <div id="chartLoading" class="chart-overlay hidden">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="travelBudgetSection" class="panel travel-panel full-width hidden">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <div class="flex-title">
+              <span class="travel-badge-icon">✈️</span>
+              <h2 class="panel-title">Travel Budgeting Comparison</h2>
+            </div>
+            <p class="panel-subtitle">Simultaneous budget translation across 5 major global destination currencies</p>
+          </div>
+          <div class="travel-base-control">
+            <div class="input-inline">
+              <span class="inline-label">Base Budget:</span>
+              <input type="number" id="travelBaseAmount" value="2000" min="1" step="any">
+            </div>
+            <div class="select-inline">
+              <span id="travelBaseFlag">🇺🇸</span>
+              <select id="travelBaseCurrency"></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="travel-table">
+            <thead>
+              <tr>
+                <th>Currency</th>
+                <th>Country / Area</th>
+                <th>Exchange Rate</th>
+                <th>Equivalent Budget</th>
+                <th>Purchasing Power</th>
+              </tr>
+            </thead>
+            <tbody id="travelTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel favorites-panel">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2 class="panel-title">Quick Access Favorites</h2>
+            <p class="panel-subtitle">Saved pairs for instant one-click analysis</p>
+          </div>
+          <span id="favoritesCount" class="badge-count">0 Pairs</span>
+        </div>
+
+        <div id="favoritesList" class="favorites-grid"></div>
+      </section>
+
+      <section class="panel history-panel">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2 class="panel-title">Recent Conversions</h2>
+            <p class="panel-subtitle">Persistent conversion cache</p>
+          </div>
+          <button id="clearHistoryBtn" class="btn-text">Clear</button>
+        </div>
+
+        <div id="historyList" class="history-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
