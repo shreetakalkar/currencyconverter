@@ -13,7 +13,7 @@ import {
 import { updateTrendChart } from './modules/chartManager.js';
 import { renderFavorites, updateFavoriteStarButton } from './modules/favoritesManager.js';
 import { renderHistory } from './modules/historyManager.js';
-import { renderTravelComparisonTable } from './modules/travelManager.js';
+import { renderTravelComparisonTable, exportTravelBudgetCsv, buildTravelSummaryText } from './modules/travelManager.js';
 
 const state = {
   currencies: [],
@@ -23,7 +23,9 @@ const state = {
   favorites: [],
   isTravelMode: false,
   travelBase: 'USD',
-  travelAmount: 2000
+  travelAmount: 2000,
+  travelDays: 7,
+  lastTravelData: null
 };
 
 const dom = {
@@ -42,6 +44,9 @@ const dom = {
   directRateText: document.getElementById('directRateText'),
   inverseRateText: document.getElementById('inverseRateText'),
   lastUpdatedText: document.getElementById('lastUpdatedText'),
+  marketRatingBadge: document.getElementById('marketRatingBadge'),
+  marketAdviceText: document.getElementById('marketAdviceText'),
+  marketMeterFill: document.getElementById('marketMeterFill'),
   chartPairSubtitle: document.getElementById('chartPairSubtitle'),
   trendChangeBadge: document.getElementById('trendChangeBadge'),
   statHigh: document.getElementById('statHigh'),
@@ -55,6 +60,11 @@ const dom = {
   travelBaseCurrency: document.getElementById('travelBaseCurrency'),
   travelBaseFlag: document.getElementById('travelBaseFlag'),
   travelTableBody: document.getElementById('travelTableBody'),
+  durationChips: document.querySelectorAll('.duration-chip'),
+  exportCsvBtn: document.getElementById('exportCsvBtn'),
+  copyBudgetBtn: document.getElementById('copyBudgetBtn'),
+  copyShareLinkBtn: document.getElementById('copyShareLinkBtn'),
+  shareBtnText: document.getElementById('shareBtnText'),
   favoritesCount: document.getElementById('favoritesCount'),
   favoritesList: document.getElementById('favoritesList'),
   historyList: document.getElementById('historyList'),
@@ -63,6 +73,7 @@ const dom = {
 };
 
 async function init() {
+  readUrlParameters();
   await loadCurrencies();
   setupEventListeners();
   await Promise.all([
@@ -71,6 +82,45 @@ async function init() {
     loadFavorites(),
     loadHistory()
   ]);
+
+  if (state.isTravelMode) {
+    dom.travelModeToggle.checked = true;
+    dom.travelBudgetSection.classList.remove('hidden');
+    loadTravelBudget();
+  }
+}
+
+function readUrlParameters() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('src')) state.sourceCurrency = params.get('src').toUpperCase();
+  if (params.has('tgt')) state.targetCurrency = params.get('tgt').toUpperCase();
+  if (params.has('amt')) {
+    const parsed = parseFloat(params.get('amt'));
+    if (!isNaN(parsed) && parsed >= 0) {
+      state.amount = parsed;
+      dom.sourceAmount.value = parsed;
+    }
+  }
+  if (params.has('travel') && params.get('travel') === '1') {
+    state.isTravelMode = true;
+  }
+  if (params.has('days')) {
+    const days = parseInt(params.get('days'), 10);
+    if (days > 0) state.travelDays = days;
+  }
+}
+
+function syncUrlParameters() {
+  const params = new URLSearchParams();
+  params.set('src', state.sourceCurrency);
+  params.set('tgt', state.targetCurrency);
+  params.set('amt', state.amount);
+  if (state.isTravelMode) {
+    params.set('travel', '1');
+    params.set('days', state.travelDays);
+  }
+  const newUrl = `${window.location.pathname}?${params.toString()}`;
+  window.history.replaceState({}, '', newUrl);
 }
 
 async function loadCurrencies() {
@@ -130,6 +180,7 @@ async function performConversion() {
     dom.inverseRateText.textContent = `1 ${data.target} = ${data.inverseRate.toFixed(4)} ${data.source}`;
     dom.lastUpdatedText.textContent = `Live at ${new Date(data.timestamp).toLocaleTimeString()}`;
 
+    syncUrlParameters();
     loadHistory();
   } catch (err) {
     console.error(err);
@@ -151,6 +202,14 @@ async function loadHistoricalTrends() {
     const sign = change > 0 ? '+' : '';
     dom.trendChangeBadge.textContent = `${sign}${change}% (30d)`;
     dom.trendChangeBadge.className = 'trend-badge ' + (change > 0 ? 'positive' : change < 0 ? 'negative' : 'neutral');
+
+    if (trends.signal) {
+      dom.marketRatingBadge.textContent = `${trends.signal.rating} (${trends.signal.volatility} Volatility)`;
+      dom.marketRatingBadge.className = `market-signal-badge ${trends.signal.status}`;
+      dom.marketAdviceText.textContent = trends.signal.advice;
+      dom.marketMeterFill.style.width = `${trends.signal.score}%`;
+      dom.marketMeterFill.className = `meter-fill ${trends.signal.status}`;
+    }
 
     updateTrendChart(dom.trendChart, trends.points, state.sourceCurrency, state.targetCurrency);
   } catch (err) {
@@ -237,8 +296,10 @@ async function loadTravelBudget() {
   state.travelAmount = isNaN(amountVal) ? 0 : amountVal;
 
   try {
-    const data = await fetchTravelBudget(state.travelBase, state.travelAmount);
+    const data = await fetchTravelBudget(state.travelBase, state.travelAmount, state.travelDays);
+    state.lastTravelData = data;
     renderTravelComparisonTable(dom.travelTableBody, data);
+    syncUrlParameters();
   } catch (err) {
     console.error(err);
   }
@@ -267,6 +328,28 @@ function swapCurrencies() {
   loadHistoricalTrends();
 }
 
+function copyShareableLink() {
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    dom.shareBtnText.textContent = 'Copied!';
+    setTimeout(() => {
+      dom.shareBtnText.textContent = 'Share Link';
+    }, 2000);
+  });
+}
+
+function copyTravelSummary() {
+  if (!state.lastTravelData) return;
+  const text = buildTravelSummaryText(state.lastTravelData);
+  navigator.clipboard.writeText(text).then(() => {
+    const btnSpan = dom.copyBudgetBtn.querySelector('span');
+    const prev = btnSpan.textContent;
+    btnSpan.textContent = 'Copied!';
+    setTimeout(() => {
+      btnSpan.textContent = prev;
+    }, 2000);
+  });
+}
+
 function setupEventListeners() {
   const debouncedConvert = debounce(performConversion, 250);
   dom.sourceAmount.addEventListener('input', debouncedConvert);
@@ -287,6 +370,7 @@ function setupEventListeners() {
 
   dom.swapCurrenciesBtn.addEventListener('click', swapCurrencies);
   dom.favoriteBtn.addEventListener('click', toggleCurrentFavorite);
+  dom.copyShareLinkBtn.addEventListener('click', copyShareableLink);
 
   dom.quickAmountButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -304,6 +388,7 @@ function setupEventListeners() {
     } else {
       dom.travelBudgetSection.classList.add('hidden');
     }
+    syncUrlParameters();
   });
 
   const debouncedTravel = debounce(loadTravelBudget, 250);
@@ -315,6 +400,22 @@ function setupEventListeners() {
     loadTravelBudget();
   });
 
+  dom.durationChips.forEach((chip) => {
+    chip.addEventListener('click', () => {
+      dom.durationChips.forEach((c) => c.classList.remove('active'));
+      chip.classList.add('active');
+      state.travelDays = parseInt(chip.getAttribute('data-days'), 10);
+      loadTravelBudget();
+    });
+  });
+
+  dom.exportCsvBtn.addEventListener('click', () => {
+    if (state.lastTravelData) {
+      exportTravelBudgetCsv(state.lastTravelData);
+    }
+  });
+
+  dom.copyBudgetBtn.addEventListener('click', copyTravelSummary);
   dom.clearHistoryBtn.addEventListener('click', handleClearHistory);
 }
 

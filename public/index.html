@@ -30,6 +30,14 @@
       </div>
 
       <div class="header-actions">
+        <button id="copyShareLinkBtn" class="btn-secondary" title="Copy shareable link">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          </svg>
+          <span id="shareBtnText">Share Link</span>
+        </button>
+
         <div class="mode-toggle-card">
           <div class="mode-label">
             <span class="mode-icon">✈️</span>
@@ -107,6 +115,21 @@
               <span id="resultAmount" class="result-value">0.00</span>
               <span id="resultTargetCode" class="result-code">EUR</span>
             </div>
+
+            <div class="market-radar-card">
+              <div class="radar-header">
+                <div class="radar-title-group">
+                  <span class="radar-icon">🎯</span>
+                  <span class="radar-title">Exchange Timing Advice</span>
+                </div>
+                <span id="marketRatingBadge" class="market-signal-badge neutral">Neutral</span>
+              </div>
+              <p id="marketAdviceText" class="radar-desc">Analyzing 30-day market movement...</p>
+              <div class="meter-track">
+                <div id="marketMeterFill" class="meter-fill neutral" style="width: 50%;"></div>
+              </div>
+            </div>
+
             <div class="result-footer">
               <div class="rate-pills">
                 <div class="rate-pill">
@@ -159,22 +182,53 @@
       </section>
 
       <section id="travelBudgetSection" class="panel travel-panel full-width hidden">
-        <div class="panel-header">
+        <div class="panel-header travel-header-row">
           <div class="panel-title-group">
             <div class="flex-title">
               <span class="travel-badge-icon">✈️</span>
-              <h2 class="panel-title">Travel Budgeting Comparison</h2>
+              <h2 class="panel-title">Travel Budgeting & Daily Allowance</h2>
             </div>
-            <p class="panel-subtitle">Simultaneous budget translation across 5 major global destination currencies</p>
+            <p class="panel-subtitle">Simultaneous multi-currency translation with smart daily allowances</p>
           </div>
+
+          <div class="travel-top-actions">
+            <button id="copyBudgetBtn" class="btn-secondary" title="Copy budget summary">
+              <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span>Copy Summary</span>
+            </button>
+            <button id="exportCsvBtn" class="btn-secondary" title="Export comparison as CSV">
+              <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Export CSV</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="travel-controls-bar">
           <div class="travel-base-control">
             <div class="input-inline">
-              <span class="inline-label">Base Budget:</span>
+              <span class="inline-label">Total Budget:</span>
               <input type="number" id="travelBaseAmount" value="2000" min="1" step="any">
             </div>
             <div class="select-inline">
               <span id="travelBaseFlag">🇺🇸</span>
               <select id="travelBaseCurrency"></select>
+            </div>
+          </div>
+
+          <div class="duration-selector-group">
+            <span class="inline-label">Trip Duration:</span>
+            <div class="duration-chips">
+              <button class="duration-chip" data-days="3">3 Days</button>
+              <button class="duration-chip active" data-days="7">7 Days</button>
+              <button class="duration-chip" data-days="14">14 Days</button>
+              <button class="duration-chip" data-days="30">30 Days</button>
             </div>
           </div>
         </div>
@@ -184,9 +238,11 @@
             <thead>
               <tr>
                 <th>Currency</th>
-                <th>Country / Area</th>
+                <th>Destination</th>
                 <th>Exchange Rate</th>
-                <th>Equivalent Budget</th>
+                <th>Total Budget</th>
+                <th>Daily Allowance</th>
+                <th>Estimated Daily Breakdown</th>
                 <th>Purchasing Power</th>
               </tr>
             </thead>

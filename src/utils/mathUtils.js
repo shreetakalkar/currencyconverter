@@ -19,7 +19,53 @@ function calculateStats(values) {
   return { min, max, avg, changePercent };
 }
 
+function calculateMarketSignal(currentRate, min, max, avg) {
+  if (max === min) {
+    return {
+      score: 50,
+      rating: 'Neutral',
+      status: 'neutral',
+      advice: 'Stable exchange rate within the 30-day cycle',
+      volatility: 'Low'
+    };
+  }
+
+  const score = Math.max(0, Math.min(100, Math.round(((currentRate - min) / (max - min)) * 100)));
+  const rangeDiff = max - min;
+  const volatilityRatio = avg > 0 ? (rangeDiff / avg) * 100 : 0;
+  const volatility = volatilityRatio > 3 ? 'High' : volatilityRatio > 1.5 ? 'Moderate' : 'Low';
+
+  if (score >= 70) {
+    return {
+      score,
+      rating: 'Favorable',
+      status: 'positive',
+      advice: 'Near 30-day peak. Highly favorable time to convert',
+      volatility
+    };
+  }
+
+  if (score <= 30) {
+    return {
+      score,
+      rating: 'Unfavorable',
+      status: 'negative',
+      advice: 'Near 30-day low. Consider waiting for a rebound',
+      volatility
+    };
+  }
+
+  return {
+    score,
+    rating: 'Neutral',
+    status: 'neutral',
+    advice: 'Holding steady near 30-day average',
+    volatility
+  };
+}
+
 module.exports = {
   round,
-  calculateStats
+  calculateStats,
+  calculateMarketSignal
 };

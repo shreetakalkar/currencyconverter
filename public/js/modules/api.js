@@ -55,7 +55,7 @@ export async function clearHistory() {
   return res.message;
 }
 
-export async function fetchTravelBudget(base, amount) {
-  const res = await request(`/api/travel-budget?base=${base}&amount=${amount}`);
+export async function fetchTravelBudget(base, amount, days = 7) {
+  const res = await request(`/api/travel-budget?base=${base}&amount=${amount}&days=${days}`);
   return res.data;
 }

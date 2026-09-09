@@ -57,20 +57,27 @@ async function runTests() {
   assert.ok('max' in trendsRes.data.data.stats);
   assert.ok('avg' in trendsRes.data.data.stats);
   assert.ok('changePercent' in trendsRes.data.data.stats);
-  console.log('PASS: GET /api/history/trends');
+  assert.ok('signal' in trendsRes.data.data);
+  assert.ok(typeof trendsRes.data.data.signal.score === 'number');
+  assert.ok(trendsRes.data.data.signal.rating);
+  assert.ok(trendsRes.data.data.signal.advice);
+  console.log('PASS: GET /api/history/trends (with Timing Signal USP)');
 
-  const travelRes = await request('/api/travel-budget?base=USD&amount=2500');
+  const travelRes = await request('/api/travel-budget?base=USD&amount=2800&days=14');
   assert.strictEqual(travelRes.status, 200);
   assert.strictEqual(travelRes.data.success, true);
+  assert.strictEqual(travelRes.data.data.base.days, 14);
   assert.strictEqual(travelRes.data.data.comparison.length, 5);
   for (const item of travelRes.data.data.comparison) {
     assert.ok(item.currency);
     assert.ok(item.rate > 0);
     assert.ok(item.convertedAmount > 0);
-    assert.ok(item.flag);
-    assert.ok(item.formattedValue);
+    assert.ok(item.dailyAllowance > 0);
+    assert.ok(item.breakdown.lodging);
+    assert.ok(item.breakdown.food);
+    assert.ok(item.breakdown.transit);
   }
-  console.log('PASS: GET /api/travel-budget (5 major global currencies)');
+  console.log('PASS: GET /api/travel-budget (with 14-day Daily Allowance USP)');
 
   const favListRes = await request('/api/favorites');
   assert.strictEqual(favListRes.status, 200);

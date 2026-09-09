@@ -45,7 +45,8 @@ const currencyController = {
     try {
       const base = (req.query.base || 'USD').toUpperCase();
       const amount = parseFloat(req.query.amount || 1000);
-      const budget = await exchangeService.getTravelBudget(base, amount);
+      const days = parseInt(req.query.days, 10) || 7;
+      const budget = await exchangeService.getTravelBudget(base, amount, days);
       return res.json({ success: true, data: budget });
     } catch (err) {
       return res.status(400).json({ success: false, error: err.message });
